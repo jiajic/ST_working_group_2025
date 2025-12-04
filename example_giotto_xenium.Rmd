@@ -775,6 +775,10 @@ Calculate a proportion table for a cell metadata table for all the spatial neigh
 The results are stored as a new spatial enrichment entry called "leiden_niche"
 
 ```{r, eval=FALSE}
+# specifically, this function calculates % of a label across defined groupings
+# of cells
+# 
+# Here we use network neighbors to to act as the unit of grouping.
 g <- calculateLabelProportions(g,
     group_method = "spatialnetwork",
     spatial_network_name = "Delaunay_network",
@@ -787,10 +791,15 @@ g <- calculateLabelProportions(g,
 
 ### k-means clustering based on niche signature
 
+Group cells into particular niche composition signatures via a clustering method
+performed on the proportions information
+
 ```{r, eval=FALSE}
-?Giotto::clusterData
-?bluster::KmeansParam
+?Giotto::clusterData # cluster matrix-like or network
+?Giotto::clusterParam # token/parameter class defining cluster method + configs
+?bluster::KmeansParam # kmeans param we use here
 knn_param <- clusterParam("kmeans", centers = 7, iter.max = 1000, nstart = 100)
+
 g <- clusterData(g, knn_param, 
     what = "spatial_enrichment", 
     spat_enr_name = "leiden_niche",
@@ -826,6 +835,9 @@ ggplot2::ggplot(
     "#4DAF4A", "#D9D9D9", "#FF7F00", "#BC80BD", "#666666", "#B3DE69")
   )
 ```
+
+
+
 
 
 ## Cell proximity enrichment
