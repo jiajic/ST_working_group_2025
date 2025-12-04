@@ -772,7 +772,7 @@ spatPlot2D(g,
 ### Niche calculation
 
 Calculate a proportion table for a cell metadata table for all the spatial neighbors of each cell. This means that with each cell established as the center of its local niche, the enrichment of each leiden cluster label is found for that local niche.
-The results are stored as a new spatial enrichment entry called "leiden_niche"
+The results are stored as a new *spatial enrichment* entry called "leiden_niche"
 
 ```{r, eval=FALSE}
 # specifically, this function calculates % of a label across defined groupings
@@ -780,14 +780,16 @@ The results are stored as a new spatial enrichment entry called "leiden_niche"
 # 
 # Here we use network neighbors to to act as the unit of grouping.
 g <- calculateLabelProportions(g,
-    group_method = "spatialnetwork",
-    spatial_network_name = "Delaunay_network",
-    labels = "leiden_clus",
-    name = "leiden_niche",
-    output = "gobject"
+    group_method = "spatialnetwork", # find groups based on network neighbors
+    spatial_network_name = "Delaunay_network", # network to use
+    labels = "leiden_clus", # what labels to find proportions for
+    name = "leiden_niche", # output name
+    output = "gobject" # can also return matrix, data.table, factor
 )
 ```
 
+Spatial enrichments are matrix-type data that makes most sense to be grouped
+together in outputs.
 
 ### k-means clustering based on niche signature
 
@@ -806,7 +808,6 @@ g <- clusterData(g, knn_param,
     name = "niche",
     output = "gobject"
 )
-
 
 # visualize niches
 spatInSituPlotPoints(g,
@@ -836,13 +837,45 @@ ggplot2::ggplot(
   )
 ```
 
+## Niches by polygons
 
+We can also use the previously generated padded hexagon polys as a method of grouping
+
+```{r, eval=FALSE}
+g <- calculateLabelProportions(g,
+    group_method = "polygon",
+    spat_info = "hex", # which spat_unit to use for grouping
+    labels = "leiden_clus",
+    name = "poly_leiden_niche",
+    output = "gobject"
+)
+
+g <- clusterData(g, knn_param,
+    what = "spatial_enrichment", 
+    spat_unit = "hex",
+    spat_enr_name = "poly_leiden_niche",
+    name = "hex_niche",
+    output = "gobject"
+)
+
+spatPlot2D(g,
+    spat_unit = "hex",
+    show_image = TRUE,
+    image_name = "HE",
+    cell_color = "hex_niche",
+    color_as_factor = TRUE,
+    point_size = 5,
+    point_alpha = 0.7
+)
+```
 
 
 
 ## Cell proximity enrichment
 
-Using a spatial network, determine if there is an enrichment or depletion between annotation types by calculating the observed over the expected frequency of interactions.
+Using a spatial network, determine if there is an enrichment or depletion between annotation types by calculating the observed over the expected frequency of interactions. The expected frequency is the average freq from reshuffling the
+cell type labels. Do we see these cell types next to each other more often than
+by chance?
 
 ```{r, eval=FALSE}
 # uses a lot of memory
@@ -862,14 +895,14 @@ cellProximityBarplot(g,
 
 
 
-Most enrichments are self-self interactions, which is expected. However, 6--8 and 2--9 stand out as being hetero interactions that are enriched with a large number of interactions. We can take a closer look by plotting these annotation pairs with colors that stand out.
+Most enrichments are self-self interactions, which is expected. However, 1--3 and 5--9 stand out as being hetero interactions that are enriched with a large number of interactions. We can take a closer look by plotting these annotation pairs with colors that stand out.
 
 ```{r, eval=FALSE}
 # set up colors
 other_cell_color <- rep("grey", 12)
-int_6_8 <- int_2_9 <- other_cell_color
-int_6_8[c(6, 8)] <- c("orange", "cornflowerblue")
-int_2_9[c(2, 9)] <- c("orange", "cornflowerblue")
+int_1_3 <- int_5_9 <- other_cell_color
+int_1_3[c(1, 3)] <- c("orange", "cornflowerblue")
+int_5_9[c(5, 9)] <- c("orange", "cornflowerblue")
 ```
 
 
@@ -877,7 +910,7 @@ int_2_9[c(2, 9)] <- c("orange", "cornflowerblue")
 spatInSituPlotPoints(g,
     polygon_fill = "leiden_clus",
     polygon_fill_as_factor = TRUE,
-    polygon_fill_code = int_6_8,
+    polygon_fill_code = int_1_3,
     polygon_line_size = 0.1,
     polygon_alpha = 1,
     show_image = TRUE,
@@ -890,7 +923,7 @@ spatInSituPlotPoints(g,
 spatInSituPlotPoints(g,
     polygon_fill = "leiden_clus",
     polygon_fill_as_factor = TRUE,
-    polygon_fill_code = int_2_9,
+    polygon_fill_code = int_5_9,
     polygon_line_size = 0.1,
     show_image = TRUE,
     polygon_alpha = 1,
