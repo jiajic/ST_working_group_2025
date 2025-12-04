@@ -91,6 +91,7 @@ In order to speed up the steps of the demo and make it locally runnable, we prov
 - Mini: 6000,    7000,      -2200,     -1400    (xmin, xmax, ymin, ymax)
 ```
 
+Setup...
 ```{r, eval=FALSE}
 library(Giotto)
 
@@ -98,7 +99,10 @@ library(Giotto)
 data_path <- "data/"
 save_dir <- "results/"
 dir.create(save_dir, recursive = TRUE)
+```
 
+Getting the data...
+```{r, eval=FALSE}
 # download the mini dataset and untar
 options("timeout" = Inf)
 download.file( # 207.7MB
@@ -167,7 +171,9 @@ When you need to use a different file format or something is not in the expected
 qv_threshold = 20 # default
 ```
 
-The _Quality Value_ is a Phred-based 0-40 value that 10X provides for every detection in their transcripts output. Higher values mean higher confidence in the decoded transcript identity. By default 10X uses a cutoff of QV = 20 for transcripts to use downstream.
+The _Quality Value_ is a Phred-based 0-40 value that 10X provides for every detection in their transcripts output.
+Computed based on their negative probes.
+Higher values mean higher confidence in the decoded transcript identity. By default 10X uses a cutoff of QV = 20 for transcripts to use downstream.
 
 _*setting a value other than 20 will make the loaded dataset different from the 10X-provided expression matrix and cell metadata._
 
@@ -204,7 +210,7 @@ There are 4 types of transcript detections that 10X reports with their v2.0 pipe
 - **Negative Control Probe** - (QC) Probes in panel but target non-biological sequences. Used to determine specificity of assay.
 - **Unassigned Codeword** - (QC) Codewords that should not be used in the current panel.
 
-With V3 on their Xenium prime outputs, there is additionally:
+With V3+ on their Xenium prime outputs, there is additionally:
 
 - **Genomic Control Codeword** (QC) Probes for intergenic genomic DNA instead of transcripts.
 
@@ -239,6 +245,7 @@ spatInSituPlotPoints(g,
 )
 ```
 
+This is a functional object
 
 ## Piecewise loading
 
@@ -266,10 +273,24 @@ plot(tx$rna)
 plot(tx$rna, dens = TRUE)
 ```
 
+### Load giottoPolygon
+```{r}
+poly_cell <- x$load_polys()
+poly_nuc <- x$load_polys("data/nucleus_boundaries.parquet")
+```
+
+```{r}
+rels <- relate(poly_cell, tx$NegControlProbe, relation = "contains")
+rels
+```
+
 
 ```{r, eval=FALSE}
 rm(tx) # remove to save space
+rm(poly_cell)
+rm(poly_nuc)
 ```
+
 
 ### (optional) Loading pre-aggregated data
 
@@ -555,6 +576,10 @@ ggplot2::ggplot(cell_stats, ggplot2::aes(total_expr)) +
 
 
 ### Filtering
+
+Very permissive filtering especially for initial exploration.
+With spatial data, a removed cell isn't just removed from the expression space
+but also leaves a new hole in space.
 
 ```{r, eval=FALSE}
 # very permissive filtering. Mainly for removing 0 values
