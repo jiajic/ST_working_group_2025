@@ -671,6 +671,80 @@ spatInSituPlotPoints(g,
 ```
 
 
+## Spatial Autocorrelation
+
+```{r, eval=FALSE}
+g <- createSpatialNetwork(g, method = "kNN", k = 8)
+future::plan(future::multisession)
+out <- spdepAutoCorr(g, method = "moran.test", spatial_network_to_use = "kNN_network")
+data.table::setorderv(out, "value")
+out
+```
+
+
+```
+      feat_ID        value
+       <char>        <num>
+  1:  SLC26A3 -0.007005661
+  2:  TMEM52B -0.005314761
+  3: SERPINB2 -0.004809797
+  4:     FCN2 -0.004240485
+  5:  SLC22A8 -0.004124212
+ ---                      
+373:     MALL  0.595445902
+374:   CYP2B6  0.622995002
+375:     SNTN  0.640062374
+376: C20orf85  0.651882792
+377: C1orf194  0.676568853
+```
+
+`binSpect()` is another functions that is good for detecting spatially variable features.
+It also works faster than most other algorithms, including morans
+
+
+
+```{r}
+hex <- tessellate(ext(g, prefer = "polygon"), shape_size = 20, gap = -5, name = "hex")
+plot(g@feat_info$rna, dens = TRUE)
+plot(hex, add = TRUE, border = "red")
+```
+
+```{r}
+g <- setGiotto(g, hex)
+g <- addSpatialCentroidLocations(g, poly_info = "hex")
+g <- createSpatialNetwork(g, method = "kNN", k = 6, spat_unit = "hex")
+g <- calculateOverlap(g, spatial_info = "hex")
+g <- overlapToMatrix(g, poly_info = "hex")
+g <- normalizeGiotto(g, spat_unit = "hex")
+out <- spdepAutoCorr(g, method = "moran.test", spatial_network_to_use = "kNN_network", spat_unit = "hex")
+data.table::setorderv(out, "value")
+out
+```
+
+```
+      feat_ID        value
+       <char>        <num>
+  1:  SLC26A3 -0.014452139
+  2:     NAT8 -0.012848731
+  3:     GYPB -0.011395081
+  4:    MLANA -0.010439133
+  5:      PPY -0.009837776
+ ---                      
+373:    EPCAM  0.647748630
+374:  TSPAN19  0.651291357
+375: C1orf194  0.674383517
+376:    PTGDS  0.686292072
+377: C20orf85  0.701066867
+```
+
+
+```{r}
+spatFeatPlot2D(g, spat_unit = "hex", feats = "TSPAN19", point_size = 2)
+spatFeatPlot2D(g, feats = "TSPAN19")
+spatFeatPlot2D(g, spat_unit = "hex", feats = "SLC26A3", point_size = 2)
+spatFeatPlot2D(g, feats = "SLC26A3")
+```
+
 
 ## Niche clustering
 
@@ -812,118 +886,5 @@ spatInSituPlotPoints(g,
 )
 ```
 
-
-
-
-## Pseudovisium
-
-Another thing we can do is create a "pseudovisium" dataset by tessellating across this dataset using the same layout and resolution as a Visium capture array.
-
-`makePseudoVisium()` generates a Visium array of circular polygons across the spatial extent provided.
-
-Here we use `ext()` with the `prefer` arg pointing to the polygon and points data and `all_data = TRUE`, meaning that the combined spatial extent of those two data types will be returned, giving a good measure of where all the data in the object is at the moment. 
-
-`micron_size = 1` since the Xenium data is already scaled to microns. 
-
-```{r, eval=FALSE}
-pvis <- makePseudoVisium(
-    extent = ext(g, prefer = c("polygon", "points"), all_data = TRUE),
-     # all_data = TRUE is the default
-    micron_size = 1
-)
-
-g <- setGiotto(g, pvis)
-g <- addSpatialCentroidLocations(g, poly_info = "pseudo_visium")
-
-plot(pvis)
-```
-
-
-
-### Pseudovisium aggregation and workflow
-
-Make "pseudo_visium" the new default spatial unit then proceed with aggregation and usual aggregate workflow.
-
-```{r, eval=FALSE}
-activeSpatUnit(g) <- "pseudo_visium"
-
-g <- calculateOverlap(g,
-    spatial_info = "pseudo_visium",
-    feat_info = "rna"
-)
-
-g <- overlapToMatrix(g)
-
-g <- filterGiotto(g,
-    expression_threshold = 1,
-    feat_det_in_min_cells = 1,
-    min_det_feats_per_cell = 100
-)
-
-g <- normalizeGiotto(g)
-
-g <- addStatistics(g)
-
-spatInSituPlotPoints(g,
-    show_image = TRUE,
-    image_name = "HE",
-    polygon_feat_type = "pseudo_visium",
-    polygon_fill = "total_expr",
-    polygon_fill_gradient_style = "sequential"
-)
-```
-
-
-
-```{r, eval=FALSE}
-g <- runPCA(g, feats_to_use = NULL)
-
-g <- runUMAP(g, 
-    dimensions_to_use = seq(15), 
-    n_neighbors = 15
-)
-
-g <- createNearestNetwork(g,
-    dimensions_to_use = seq(15), 
-    k = 15
-)
-
-g <- doLeidenCluster(g, resolution = 1.5)
-```
-
-
-```{r, eval=FALSE}
-# plots
-plotPCA(g, 
-    cell_color = "leiden_clus", 
-    point_size = 2)
-```
-
-
-```{r, eval=FALSE}
-plotUMAP(g, 
-    cell_color = "leiden_clus", 
-    point_size = 2)
-```
-
-
-```{r, eval=FALSE}
-spatInSituPlotPoints(g,
-    polygon_feat_type = "pseudo_visium",
-    polygon_fill = "leiden_clus",
-    polygon_fill_as_factor = TRUE
-)
-```
-
-
-```{r, eval=FALSE}
-spatInSituPlotPoints(g,
-    polygon_feat_type = "pseudo_visium",
-    polygon_fill = "leiden_clus",
-    polygon_fill_as_factor = TRUE,
-    show_image = TRUE,
-    image_name = "HE"
-)
-```
 
 
